@@ -1,161 +1,260 @@
-import { Tool } from '@langchain/core/tools';
 import {
-	NodeConnectionType,
-	type INodeType,
-	type INodeTypeDescription,
-	type IExecuteFunctions,
-	type INodeExecutionData,
+    IExecuteFunctions,
+    INodeExecutionData,
+    INodeType,
+    INodeTypeDescription,
+    NodeOperationError,
+    IDataObject,
+    NodeConnectionType,
 } from 'n8n-workflow';
 import axios from 'axios';
 
-class BraveSearchTool extends Tool {
-	name = 'brave_search';
-	description = 'A tool for performing web searches using Brave Search API';
-	apiKey: string;
-	options: {
-		country?: string;
-		count?: number;
-		safesearch?: 'strict' | 'moderate' | 'off';
-	};
-
-	constructor(apiKey: string, options = {}) {
-		super();
-		this.apiKey = apiKey;
-		this.options = options;
-	}
-
-	async _call(query: string): Promise<string> {
-		try {
-			const response = await axios.get('https://api.search.brave.com/res/v1/web/search', {
-				params: {
-					q: query,
-					...this.options,
-				},
-				headers: {
-					'X-Subscription-Token': this.apiKey,
-					'Accept': 'application/json',
-				},
-			});
-
-			if (!response.data?.web?.results?.length) {
-				return 'No results found';
-			}
-
-			const results = response.data.web.results.slice(0, 3);
-			return results
-				.map((r: any) => `${r.title}\n${r.description}\nURL: ${r.url}`)
-				.join('\n\n');
-		} catch (error) {
-			return `Error performing Brave search: ${error.message}`;
-		}
-	}
+interface IBraveSearchParams {
+    q: string;
+    country?: string;
+    count?: number;
+    offset?: number;
+    safesearch?: 'strict' | 'moderate' | 'off';
 }
 
-export class ToolBraveSearch implements INodeType {
-	description: INodeTypeDescription = {
-		displayName: 'Brave Search Tool',
-		name: 'toolBraveSearch',
-		icon: 'file:brave-logo-sans-text.svg',
-		group: ['transform'],
-		version: 1,
-		description: 'Use Brave Search in your LLM Tools',
-		defaults: {
-			name: 'Brave Search Tool',
-		},
-		codex: {
-			categories: ['AI'],
-			subcategories: {
-				AI: ['Tools'],
-				Tools: ['Search Tools'],
-			},
-			resources: {
-				primaryDocumentation: [
-					{
-						url: 'https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.toolbravesearch/',
-					},
-				],
-			},
-		},
-		inputs: [],
-		outputs: [NodeConnectionType.AiTool],
-		outputNames: ['Tool'],
-		credentials: [
-			{
-				name: 'braveSearchApi',
-				required: true,
-			},
-		],
-		properties: [
-			{
-				displayName: 'This node must be connected to an AI Agent',
-				name: 'notice',
-				type: 'notice',
-				default: '',
-				typeOptions: {
-					containerClass: 'ndv-connection-hint-notice',
-				},
-			},
-			{
-				displayName: 'Options',
-				name: 'options',
-				type: 'collection',
-				placeholder: 'Add Option',
-				default: {},
-				options: [
-					{
-						displayName: 'Country',
-						name: 'country',
-						type: 'string',
-						default: 'US',
-						description: 'Country code for search results (e.g., US, GB)',
-					},
-					{
-						displayName: 'Results Count',
-						name: 'count',
-						type: 'number',
-						default: 3,
-						description: 'Number of results to return in each search',
-					},
-					{
-						displayName: 'Safe Search',
-						name: 'safesearch',
-						type: 'options',
-						options: [
-							{
-								name: 'Strict',
-								value: 'strict',
-							},
-							{
-								name: 'Moderate',
-								value: 'moderate',
-							},
-							{
-								name: 'Off',
-								value: 'off',
-							},
-						],
-						default: 'moderate',
-						description: 'Safe search setting',
-					},
-				],
-			},
-		],
-	};
+interface IBraveSearchResult {
+    title: string;
+    url: string;
+    description: string;
+    [key: string]: unknown;
+}
 
-	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
-		const credentials = await this.getCredentials('braveSearchApi');
-		const options = this.getNodeParameter('options', 0) as {
-			country?: string;
-			count?: number;
-			safesearch?: 'strict' | 'moderate' | 'off';
-		};
+interface IBraveSearchResponse {
+    web: {
+        results: IBraveSearchResult[];
+        [key: string]: unknown;
+    };
+    [key: string]: unknown;
+}
 
-		const tool = new BraveSearchTool(credentials.apiKey as string, options);
-		
-		return [[{
-			json: {
-				response: tool
-			},
-		}]];
-	}
-} 
+export class BraveSearchTool implements INodeType {
+    description: INodeTypeDescription & { usableAsTool?: boolean } = {
+        displayName: 'Brave Search Tool',
+        name: 'braveSearchTool',
+        icon: 'file:brave-logo-sans-text.svg',
+        group: ['transform'],
+        version: 1,
+        subtitle: '={{$parameter["operation"]}}',
+        description: 'Make requests to Brave Search API',
+        defaults: {
+            name: 'Brave Search Tool',
+        },
+        inputs: [NodeConnectionType.Main],
+        outputs: [NodeConnectionType.Main],
+        usableAsTool: true,
+        credentials: [
+            {
+                name: 'braveSearchApi',
+                required: true,
+            },
+        ],
+        properties: [
+            {
+                displayName: 'Operation',
+                name: 'operation',
+                type: 'options',
+                noDataExpression: true,
+                options: [
+                    {
+                        name: 'Web Search',
+                        value: 'webSearch',
+                        description: 'Perform a web search',
+                        action: 'Perform a web search',
+                    },
+                ],
+                default: 'webSearch',
+            },
+            {
+                displayName: 'Query',
+                name: 'query',
+                type: 'string',
+                default: '',
+                required: true,
+                displayOptions: {
+                    show: {
+                        operation: ['webSearch'],
+                    },
+                },
+                description: 'The search query to execute',
+            },
+            {
+                displayName: 'Additional Fields',
+                name: 'additionalFields',
+                type: 'collection',
+                placeholder: 'Add Field',
+                default: {},
+                displayOptions: {
+                    show: {
+                        operation: ['webSearch'],
+                    },
+                },
+                options: [
+                    {
+                        displayName: 'Country',
+                        name: 'country',
+                        type: 'string',
+                        default: '',
+                        description: 'Country code for search results (e.g., US, GB)',
+                    },
+                    {
+                        displayName: 'Results Count',
+                        name: 'count',
+                        type: 'number',
+                        typeOptions: {
+                            minValue: 1,
+                            maxValue: 20,
+                        },
+                        default: 10,
+                        description: 'Number of results to return (max: 20)',
+                    },
+                    {
+                        displayName: 'Offset',
+                        name: 'offset',
+                        type: 'number',
+                        typeOptions: {
+                            minValue: 0,
+                        },
+                        default: 0,
+                        description: 'Offset for pagination',
+                    },
+                    {
+                        displayName: 'Safe Search',
+                        name: 'safesearch',
+                        type: 'options',
+                        options: [
+                            {
+                                name: 'Strict',
+                                value: 'strict',
+                            },
+                            {
+                                name: 'Moderate',
+                                value: 'moderate',
+                            },
+                            {
+                                name: 'Off',
+                                value: 'off',
+                            },
+                        ],
+                        default: 'moderate',
+                        description: 'Safe search setting',
+                    },
+                ],
+            },
+        ],
+    };
+
+    async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
+        const items = this.getInputData();
+        const returnData: INodeExecutionData[] = [];
+        let query = '';
+        let params: IBraveSearchParams | undefined;
+
+        for (let i = 0; i < items.length; i++) {
+            try {
+                const operation = this.getNodeParameter('operation', i) as string;
+
+                if (operation === 'webSearch') {
+                    query = this.getNodeParameter('query', i) as string;
+                    const additionalFields = this.getNodeParameter('additionalFields', i) as {
+                        country?: string;
+                        count?: number;
+                        offset?: number;
+                        safesearch?: 'strict' | 'moderate' | 'off';
+                    };
+
+                    const credentials = await this.getCredentials('braveSearchApi');
+                    
+                    if (!credentials?.apiKey) {
+                        throw new Error('No API key provided in credentials');
+                    }
+
+                    params = {
+                        q: query,
+                        ...additionalFields,
+                    };
+
+                    try {
+                        const response = await axios.get<IBraveSearchResponse>(
+                            'https://api.search.brave.com/res/v1/web/search',
+                            {
+                                params,
+                                headers: {
+                                    'X-Subscription-Token': credentials.apiKey as string,
+                                    'Accept': 'application/json',
+                                },
+                            }
+                        );
+
+                        if (!response.data) {
+                            throw new Error('Empty response from Brave Search API');
+                        }
+
+                        if (!response.data.web || !Array.isArray(response.data.web.results)) {
+                            throw new Error(`Invalid response structure. Got: ${JSON.stringify(response.data)}`);
+                        }
+
+                        const responseData: IDataObject = {
+                            ...response.data,
+                            web: {
+                                ...(response.data.web || {}),
+                                results: response.data.web.results.map((result: IBraveSearchResult) => ({
+                                    ...result,
+                                    title: result.title || '',
+                                    url: result.url || '',
+                                    description: result.description || ''
+                                }))
+                            }
+                        };
+
+                        const executionData = this.helpers.constructExecutionMetaData(
+                            this.helpers.returnJsonArray(responseData),
+                            { itemData: { item: i } },
+                        );
+                        returnData.push(...executionData);
+                    } catch (error: any) {
+                        if (axios.isAxiosError(error)) {
+                            throw new Error(
+                                `API Request failed: ${error.message}. ` +
+                                `Status: ${error.response?.status}. ` +
+                                `Response: ${JSON.stringify(error.response?.data)}`
+                            );
+                        }
+                        throw error;
+                    }
+                }
+            } catch (error: any) {
+                if (this.continueOnFail()) {
+                    const executionErrorData = this.helpers.constructExecutionMetaData(
+                        this.helpers.returnJsonArray({
+                            error: error.message,
+                            details: error.response?.data || 'No additional error details available',
+                            status: error.response?.status || 'Unknown status',
+                            query: query || 'No query provided',
+                            params: params || 'No params available'
+                        }),
+                        { itemData: { item: i } },
+                    );
+                    returnData.push(...executionErrorData);
+                    continue;
+                }
+                throw new NodeOperationError(
+                    this.getNode(),
+                    `Execution failed: ${error.message}`,
+                    {
+                        description: error.response?.data 
+                            ? `API Response: ${JSON.stringify(error.response.data)}`
+                            : undefined,
+                        itemIndex: i,
+                    }
+                );
+            }
+        }
+
+        return [returnData];
+    }
+}
