@@ -37,7 +37,7 @@ export class BraveSearchTool implements INodeType {
         displayName: 'Brave Search Tool',
         name: 'braveSearchTool',
         icon: 'file:brave-logo-sans-text.svg',
-        group: ['transform'],
+        group: ['transform', 'output'],
         version: 1,
         subtitle: '={{$parameter["operation"]}}',
         description: 'Make requests to Brave Search API',
