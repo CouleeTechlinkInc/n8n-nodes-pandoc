@@ -32,7 +32,7 @@ interface IBraveSearchResponse {
 }
 
 export class BraveSearch implements INodeType {
-    description: INodeTypeDescription = {
+    description: INodeTypeDescription  & { usableAsTool?: boolean }  = {
         displayName: 'Brave Search',
         name: 'braveSearch',
         icon: 'file:brave-logo-sans-text.svg',
@@ -43,6 +43,7 @@ export class BraveSearch implements INodeType {
         defaults: {
             name: 'Brave Search',
         },
+        usableAsTool: true,
         inputs: ['main'],
         outputs: ['main'],
         credentials: [
