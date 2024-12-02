@@ -36,7 +36,8 @@
       "dist/credentials/BraveSearchApi.credentials.js"
     ],
     "nodes": [
-      "dist/nodes/BraveSearch/BraveSearch.node.js"
+      "dist/nodes/BraveSearch/BraveSearch.node.js",
+      "dist/nodes/BraveSearchTool/BraveSearchTool.node.js"
     ]
   },
   "devDependencies": {
