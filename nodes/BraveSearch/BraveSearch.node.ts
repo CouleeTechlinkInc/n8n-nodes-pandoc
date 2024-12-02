@@ -6,12 +6,30 @@ import {
     NodeOperationError,
     IDataObject,
 } from 'n8n-workflow';
-import axios, { AxiosResponse } from 'axios';
-import { 
-    IBraveSearchCredentials,
-    IBraveSearchParams,
-    IBraveSearchResponse
-} from './types';
+import axios from 'axios';
+
+interface IBraveSearchParams {
+    q: string;
+    country?: string;
+    count?: number;
+    offset?: number;
+    safesearch?: 'strict' | 'moderate' | 'off';
+}
+
+interface IBraveSearchResult {
+    title: string;
+    url: string;
+    description: string;
+    [key: string]: unknown;
+}
+
+interface IBraveSearchResponse {
+    web: {
+        results: IBraveSearchResult[];
+        [key: string]: unknown;
+    };
+    [key: string]: unknown;
+}
 
 export class BraveSearch implements INodeType {
     description: INodeTypeDescription = {
@@ -131,12 +149,15 @@ export class BraveSearch implements INodeType {
     async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
         const items = this.getInputData();
         const returnData: INodeExecutionData[] = [];
-        const operation = this.getNodeParameter('operation', 0) as string;
+        let query = '';
+        let params: IBraveSearchParams | undefined;
 
         for (let i = 0; i < items.length; i++) {
             try {
+                const operation = this.getNodeParameter('operation', i) as string;
+
                 if (operation === 'webSearch') {
-                    const query = this.getNodeParameter('query', i) as string;
+                    query = this.getNodeParameter('query', i) as string;
                     const additionalFields = this.getNodeParameter('additionalFields', i) as {
                         country?: string;
                         count?: number;
@@ -144,67 +165,93 @@ export class BraveSearch implements INodeType {
                         safesearch?: 'strict' | 'moderate' | 'off';
                     };
 
-                    const credentials = (await this.getCredentials('braveSearchApi')) as unknown as IBraveSearchCredentials;
-
-                    const params: IBraveSearchParams = {
-                        q: query,
-                    };
-
-                    if (additionalFields.country) params.country = additionalFields.country;
-                    if (additionalFields.count) params.count = additionalFields.count;
-                    if (additionalFields.offset) params.offset = additionalFields.offset;
-                    if (additionalFields.safesearch) params.safesearch = additionalFields.safesearch;
-
-                    const response: AxiosResponse<IBraveSearchResponse> = await axios.get(
-                        'https://api.search.brave.com/res/v1/web/search',
-                        {
-                            params,
-                            headers: {
-                                'X-Subscription-Token': credentials.apiKey,
-                            },
-                        }
-                    );
-
-                    // Validate response structure
-                    if (!response.data || !response.data.web || !Array.isArray(response.data.web.results)) {
-                        throw new Error('Invalid response structure from Brave Search API');
+                    const credentials = await this.getCredentials('braveSearchApi');
+                    
+                    if (!credentials?.apiKey) {
+                        throw new Error('No API key provided in credentials');
                     }
 
-                    // Convert the response data to IDataObject safely
-                    const responseData: IDataObject = {
-                        ...response.data,
-                        web: {
-                            ...(response.data.web || {}),
-                            results: (response.data.web.results || []).map(result => ({
-                                ...result,
-                                title: result.title || '',
-                                url: result.url || '',
-                                description: result.description || ''
-                            }))
-                        }
+                    params = {
+                        q: query,
+                        ...additionalFields,
                     };
 
-                    returnData.push({
-                        json: responseData,
-                        pairedItem: i,
-                    });
+                    try {
+                        const response = await axios.get<IBraveSearchResponse>(
+                            'https://api.search.brave.com/res/v1/web/search',
+                            {
+                                params,
+                                headers: {
+                                    'X-Subscription-Token': credentials.apiKey as string,
+                                    'Accept': 'application/json',
+                                },
+                            }
+                        );
+
+                        // Log response structure for debugging
+                        console.log('Response status:', response.status);
+                        console.log('Response data structure:', Object.keys(response.data));
+                        
+                        if (!response.data) {
+                            throw new Error('Empty response from Brave Search API');
+                        }
+
+                        if (!response.data.web || !Array.isArray(response.data.web.results)) {
+                            throw new Error(`Invalid response structure. Got: ${JSON.stringify(response.data)}`);
+                        }
+
+                        const responseData: IDataObject = {
+                            ...response.data,
+                            web: {
+                                ...(response.data.web || {}),
+                                results: response.data.web.results.map((result: IBraveSearchResult) => ({
+                                    ...result,
+                                    title: result.title || '',
+                                    url: result.url || '',
+                                    description: result.description || ''
+                                }))
+                            }
+                        };
+
+                        returnData.push({
+                            json: responseData,
+                            pairedItem: i,
+                        });
+                    } catch (error: any) {
+                        if (axios.isAxiosError(error)) {
+                            throw new Error(
+                                `API Request failed: ${error.message}. ` +
+                                `Status: ${error.response?.status}. ` +
+                                `Response: ${JSON.stringify(error.response?.data)}`
+                            );
+                        }
+                        throw error;
+                    }
                 }
-            } catch (error) {
+            } catch (error: any) {
                 if (this.continueOnFail()) {
                     returnData.push({
                         json: {
                             error: error.message,
                             details: error.response?.data || 'No additional error details available',
                             status: error.response?.status || 'Unknown status',
+                            query: query || 'No query provided',
+                            params: params || 'No params available'
                         },
                         pairedItem: i,
                     });
                     continue;
                 }
-                const errorMessage = error.response?.data
-                    ? `API Error: ${error.message}. Details: ${JSON.stringify(error.response.data)}`
-                    : `Error: ${error.message}`;
-                throw new NodeOperationError(this.getNode(), new Error(errorMessage));
+                throw new NodeOperationError(
+                    this.getNode(),
+                    `Execution failed: ${error.message}`,
+                    {
+                        description: error.response?.data 
+                            ? `API Response: ${JSON.stringify(error.response.data)}`
+                            : undefined,
+                        itemIndex: i,
+                    }
+                );
             }
         }
 

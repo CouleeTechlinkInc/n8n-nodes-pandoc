@@ -123,46 +123,66 @@ class BraveSearch {
         };
     }
     async execute() {
-        var _a, _b, _c;
+        var _a, _b, _c, _d, _e;
         const items = this.getInputData();
         const returnData = [];
-        const operation = this.getNodeParameter('operation', 0);
+        let query = '';
+        let params;
         for (let i = 0; i < items.length; i++) {
             try {
+                const operation = this.getNodeParameter('operation', i);
                 if (operation === 'webSearch') {
-                    const query = this.getNodeParameter('query', i);
+                    query = this.getNodeParameter('query', i);
                     const additionalFields = this.getNodeParameter('additionalFields', i);
-                    const credentials = (await this.getCredentials('braveSearchApi'));
-                    const params = {
+                    const credentials = await this.getCredentials('braveSearchApi');
+                    if (!(credentials === null || credentials === void 0 ? void 0 : credentials.apiKey)) {
+                        throw new Error('No API key provided in credentials');
+                    }
+                    params = {
                         q: query,
+                        ...additionalFields,
                     };
-                    if (additionalFields.country)
-                        params.country = additionalFields.country;
-                    if (additionalFields.count)
-                        params.count = additionalFields.count;
-                    if (additionalFields.offset)
-                        params.offset = additionalFields.offset;
-                    if (additionalFields.safesearch)
-                        params.safesearch = additionalFields.safesearch;
-                    const response = await axios_1.default.get('https://api.search.brave.com/res/v1/web/search', {
-                        params,
-                        headers: {
-                            'X-Subscription-Token': credentials.apiKey,
-                        },
-                    });
-                    const responseData = {
-                        ...response.data,
-                        web: {
-                            ...response.data.web,
-                            results: response.data.web.results.map(result => ({
-                                ...result
-                            }))
+                    try {
+                        const response = await axios_1.default.get('https://api.search.brave.com/res/v1/web/search', {
+                            params,
+                            headers: {
+                                'X-Subscription-Token': credentials.apiKey,
+                                'Accept': 'application/json',
+                            },
+                        });
+                        console.log('Response status:', response.status);
+                        console.log('Response data structure:', Object.keys(response.data));
+                        if (!response.data) {
+                            throw new Error('Empty response from Brave Search API');
                         }
-                    };
-                    returnData.push({
-                        json: responseData,
-                        pairedItem: i,
-                    });
+                        if (!response.data.web || !Array.isArray(response.data.web.results)) {
+                            throw new Error(`Invalid response structure. Got: ${JSON.stringify(response.data)}`);
+                        }
+                        const responseData = {
+                            ...response.data,
+                            web: {
+                                ...(response.data.web || {}),
+                                results: response.data.web.results.map((result) => ({
+                                    ...result,
+                                    title: result.title || '',
+                                    url: result.url || '',
+                                    description: result.description || ''
+                                }))
+                            }
+                        };
+                        returnData.push({
+                            json: responseData,
+                            pairedItem: i,
+                        });
+                    }
+                    catch (error) {
+                        if (axios_1.default.isAxiosError(error)) {
+                            throw new Error(`API Request failed: ${error.message}. ` +
+                                `Status: ${(_a = error.response) === null || _a === void 0 ? void 0 : _a.status}. ` +
+                                `Response: ${JSON.stringify((_b = error.response) === null || _b === void 0 ? void 0 : _b.data)}`);
+                        }
+                        throw error;
+                    }
                 }
             }
             catch (error) {
@@ -170,21 +190,24 @@ class BraveSearch {
                     returnData.push({
                         json: {
                             error: error.message,
-                            details: ((_a = error.response) === null || _a === void 0 ? void 0 : _a.data) || 'No additional error details available',
-                            status: ((_b = error.response) === null || _b === void 0 ? void 0 : _b.status) || 'Unknown status',
+                            details: ((_c = error.response) === null || _c === void 0 ? void 0 : _c.data) || 'No additional error details available',
+                            status: ((_d = error.response) === null || _d === void 0 ? void 0 : _d.status) || 'Unknown status',
+                            query: query || 'No query provided',
+                            params: params || 'No params available'
                         },
                         pairedItem: i,
                     });
                     continue;
                 }
-                const errorMessage = ((_c = error.response) === null || _c === void 0 ? void 0 : _c.data)
-                    ? `API Error: ${error.message}. Details: ${JSON.stringify(error.response.data)}`
-                    : `Error: ${error.message}`;
-                throw new n8n_workflow_1.NodeOperationError(this.getNode(), new Error(errorMessage));
+                throw new n8n_workflow_1.NodeOperationError(this.getNode(), `Execution failed: ${error.message}`, {
+                    description: ((_e = error.response) === null || _e === void 0 ? void 0 : _e.data)
+                        ? `API Response: ${JSON.stringify(error.response.data)}`
+                        : undefined,
+                    itemIndex: i,
+                });
             }
         }
         return [returnData];
     }
 }
 exports.BraveSearch = BraveSearch;
-//# sourceMappingURL=BraveSearch.node.js.map

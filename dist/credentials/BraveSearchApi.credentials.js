@@ -16,7 +16,7 @@ class BraveSearchApi {
                 },
                 default: '',
                 required: true,
-                description: 'The API key for Brave Search',
+                description: 'The API key for Brave Search. Get it from https://api.search.brave.com/app/keys',
             },
         ];
         this.authenticate = {
@@ -24,6 +24,7 @@ class BraveSearchApi {
             properties: {
                 headers: {
                     'X-Subscription-Token': '={{$credentials.apiKey}}',
+                    'Accept': 'application/json',
                 },
             },
         };
@@ -34,10 +35,13 @@ class BraveSearchApi {
                 method: 'GET',
                 qs: {
                     q: 'test'
-                }
+                },
+                headers: {
+                    'Accept': 'application/json',
+                },
+                skipSslCertificateValidation: false,
             },
         };
     }
 }
 exports.BraveSearchApi = BraveSearchApi;
-//# sourceMappingURL=BraveSearchApi.credentials.js.map
