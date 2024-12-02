@@ -123,6 +123,7 @@ class BraveSearch {
         };
     }
     async execute() {
+        var _a, _b, _c;
         const items = this.getInputData();
         const returnData = [];
         const operation = this.getNodeParameter('operation', 0);
@@ -169,12 +170,17 @@ class BraveSearch {
                     returnData.push({
                         json: {
                             error: error.message,
+                            details: ((_a = error.response) === null || _a === void 0 ? void 0 : _a.data) || 'No additional error details available',
+                            status: ((_b = error.response) === null || _b === void 0 ? void 0 : _b.status) || 'Unknown status',
                         },
                         pairedItem: i,
                     });
                     continue;
                 }
-                throw new n8n_workflow_1.NodeOperationError(this.getNode(), error);
+                const errorMessage = ((_c = error.response) === null || _c === void 0 ? void 0 : _c.data)
+                    ? `API Error: ${error.message}. Details: ${JSON.stringify(error.response.data)}`
+                    : `Error: ${error.message}`;
+                throw new n8n_workflow_1.NodeOperationError(this.getNode(), new Error(errorMessage));
             }
         }
         return [returnData];

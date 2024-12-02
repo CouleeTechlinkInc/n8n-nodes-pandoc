@@ -186,12 +186,17 @@ export class BraveSearch implements INodeType {
                     returnData.push({
                         json: {
                             error: error.message,
+                            details: error.response?.data || 'No additional error details available',
+                            status: error.response?.status || 'Unknown status',
                         },
                         pairedItem: i,
                     });
                     continue;
                 }
-                throw new NodeOperationError(this.getNode(), error);
+                const errorMessage = error.response?.data
+                    ? `API Error: ${error.message}. Details: ${JSON.stringify(error.response.data)}`
+                    : `Error: ${error.message}`;
+                throw new NodeOperationError(this.getNode(), new Error(errorMessage));
             }
         }
 
