@@ -165,13 +165,21 @@ export class BraveSearch implements INodeType {
                         }
                     );
 
-                    // Convert the response data to IDataObject
+                    // Validate response structure
+                    if (!response.data || !response.data.web || !Array.isArray(response.data.web.results)) {
+                        throw new Error('Invalid response structure from Brave Search API');
+                    }
+
+                    // Convert the response data to IDataObject safely
                     const responseData: IDataObject = {
                         ...response.data,
                         web: {
-                            ...response.data.web,
-                            results: response.data.web.results.map(result => ({
-                                ...result
+                            ...(response.data.web || {}),
+                            results: (response.data.web.results || []).map(result => ({
+                                ...result,
+                                title: result.title || '',
+                                url: result.url || '',
+                                description: result.description || ''
                             }))
                         }
                     };

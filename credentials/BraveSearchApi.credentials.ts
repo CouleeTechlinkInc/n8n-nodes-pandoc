@@ -1,4 +1,4 @@
-import {
+import type {
     IAuthenticateGeneric,
     ICredentialTestRequest,
     ICredentialType,
@@ -20,7 +20,7 @@ export class BraveSearchApi implements ICredentialType {
             },
             default: '',
             required: true,
-            description: 'The API key for Brave Search',
+            description: 'The API key for Brave Search. Get it from https://api.search.brave.com/app/keys',
         },
     ];
 
@@ -29,6 +29,7 @@ export class BraveSearchApi implements ICredentialType {
         properties: {
             headers: {
                 'X-Subscription-Token': '={{$credentials.apiKey}}',
+                'Accept': 'application/json',
             },
         },
     };
@@ -40,7 +41,11 @@ export class BraveSearchApi implements ICredentialType {
             method: 'GET',
             qs: {
                 q: 'test'
-            }
+            },
+            headers: {
+                'Accept': 'application/json',
+            },
+            skipSslCertificateValidation: false,
         },
     };
 }
