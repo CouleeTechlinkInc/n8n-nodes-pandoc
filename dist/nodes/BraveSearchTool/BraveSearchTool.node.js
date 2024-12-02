@@ -61,13 +61,13 @@ class ToolBraveSearch {
                 resources: {
                     primaryDocumentation: [
                         {
-                            url: 'https://docs.n8n.io/',
+                            url: 'https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.toolbravesearch/',
                         },
                     ],
                 },
             },
             inputs: [],
-            outputs: ['ai_tool'],
+            outputs: ["ai_tool"],
             outputNames: ['Tool'],
             credentials: [
                 {
@@ -77,14 +77,12 @@ class ToolBraveSearch {
             ],
             properties: [
                 {
-                    displayName: 'Connection Type Notice',
-                    name: 'connectionTypeNotice',
+                    displayName: 'This node must be connected to an AI Agent',
+                    name: 'notice',
                     type: 'notice',
-                    default: 'For use with AI Agents only',
-                    displayOptions: {
-                        show: {
-                            '@version': [1],
-                        },
+                    default: '',
+                    typeOptions: {
+                        containerClass: 'ndv-connection-hint-notice',
                     },
                 },
                 {
@@ -137,9 +135,10 @@ class ToolBraveSearch {
     async execute() {
         const credentials = await this.getCredentials('braveSearchApi');
         const options = this.getNodeParameter('options', 0);
+        const tool = new BraveSearchTool(credentials.apiKey, options);
         return [[{
                     json: {
-                        response: new BraveSearchTool(credentials.apiKey, options),
+                        response: tool
                     },
                 }]];
     }

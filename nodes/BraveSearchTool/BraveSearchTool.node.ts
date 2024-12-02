@@ -1,8 +1,10 @@
 import { Tool } from '@langchain/core/tools';
 import {
-	IExecuteFunctions,
-	INodeType,
-	INodeTypeDescription,
+	NodeConnectionType,
+	type INodeType,
+	type INodeTypeDescription,
+	type IExecuteFunctions,
+	type INodeExecutionData,
 } from 'n8n-workflow';
 import axios from 'axios';
 
@@ -39,7 +41,6 @@ class BraveSearchTool extends Tool {
 				return 'No results found';
 			}
 
-			// Format the results into a concise summary
 			const results = response.data.web.results.slice(0, 3);
 			return results
 				.map((r: any) => `${r.title}\n${r.description}\nURL: ${r.url}`)
@@ -70,13 +71,13 @@ export class ToolBraveSearch implements INodeType {
 			resources: {
 				primaryDocumentation: [
 					{
-						url: 'https://docs.n8n.io/',
+						url: 'https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.toolbravesearch/',
 					},
 				],
 			},
 		},
 		inputs: [],
-		outputs: ['ai_tool'],
+		outputs: [NodeConnectionType.AiTool],
 		outputNames: ['Tool'],
 		credentials: [
 			{
@@ -86,14 +87,12 @@ export class ToolBraveSearch implements INodeType {
 		],
 		properties: [
 			{
-				displayName: 'Connection Type Notice',
-				name: 'connectionTypeNotice',
+				displayName: 'This node must be connected to an AI Agent',
+				name: 'notice',
 				type: 'notice',
-				default: 'For use with AI Agents only',
-				displayOptions: {
-					show: {
-						'@version': [1],
-					},
+				default: '',
+				typeOptions: {
+					containerClass: 'ndv-connection-hint-notice',
 				},
 			},
 			{
@@ -143,7 +142,7 @@ export class ToolBraveSearch implements INodeType {
 		],
 	};
 
-	async execute(this: IExecuteFunctions) {
+	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const credentials = await this.getCredentials('braveSearchApi');
 		const options = this.getNodeParameter('options', 0) as {
 			country?: string;
@@ -151,9 +150,11 @@ export class ToolBraveSearch implements INodeType {
 			safesearch?: 'strict' | 'moderate' | 'off';
 		};
 
+		const tool = new BraveSearchTool(credentials.apiKey as string, options);
+		
 		return [[{
 			json: {
-				response: new BraveSearchTool(credentials.apiKey as string, options),
+				response: tool
 			},
 		}]];
 	}
