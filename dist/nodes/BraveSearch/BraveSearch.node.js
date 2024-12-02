@@ -19,6 +19,7 @@ class BraveSearch {
             defaults: {
                 name: 'Brave Search',
             },
+            usableAsTool: true,
             inputs: ['main'],
             outputs: ['main'],
             credentials: [
