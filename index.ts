@@ -1,11 +1,8 @@
 import { INodeType } from 'n8n-workflow';
-import { BraveSearch } from './nodes/BraveSearch/BraveSearch.node';
-import { BraveSearchApi } from './credentials/BraveSearchApi.credentials';
+import { NpmSearch } from './nodes/NpmSearch/NpmSearch.node';
 
-export { BraveSearch, BraveSearchApi };
-
-const nodes: INodeType[] = [
-    BraveSearch,
+export const nodes: INodeType[] = [
+	NpmSearch,
 ];
 
 export const nodeTypes = nodes;
