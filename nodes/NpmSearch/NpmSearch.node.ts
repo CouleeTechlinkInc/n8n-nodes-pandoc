@@ -5,9 +5,13 @@ import {
     INodeTypeDescription,
     NodeConnectionType,
 } from 'n8n-workflow';
-import { DynamicStructuredTool } from '@langchain/core/tools';
-import { z } from 'zod';
 import axios from 'axios';
+
+interface NpmSearchParams {
+    searchQuery: string;
+    size?: number;
+    from?: number;
+}
 
 export class NpmSearch implements INodeType {
     description: INodeTypeDescription = {
@@ -62,7 +66,7 @@ export class NpmSearch implements INodeType {
                 },
                 required: ['searchQuery'],
             },
-            async function({ searchQuery, size = 20, from = 0 }) {
+            async function({ searchQuery, size = 20, from = 0 }: NpmSearchParams) {
                 try {
                     const response = await axios.get(`https://registry.npmjs.org/-/v1/search`, {
                         params: {
