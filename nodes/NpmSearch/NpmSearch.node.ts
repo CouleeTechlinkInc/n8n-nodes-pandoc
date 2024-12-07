@@ -39,15 +39,30 @@ export class NpmSearch implements INodeType {
     };
 
     async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
-        const npmSearchTool = new DynamicStructuredTool({
+        const npmSearchTool = {
             name: 'npm_search',
             description: 'Search for NPM packages. Use this when you need to find Node.js packages, their versions, descriptions, and relevance scores.',
-            schema: z.object({
-                searchQuery: z.string().describe('The search term to look for in NPM packages'),
-                size: z.number().optional().describe('Number of results to return (default: 20)'),
-                from: z.number().optional().describe('Offset for pagination (default: 0)'),
-            }),
-            func: async ({ searchQuery, size = 20, from = 0 }) => {
+            schema: {
+                type: 'object',
+                properties: {
+                    searchQuery: {
+                        type: 'string',
+                        description: 'The search term to look for in NPM packages',
+                    },
+                    size: {
+                        type: 'number',
+                        description: 'Number of results to return (default: 20)',
+                        optional: true,
+                    },
+                    from: {
+                        type: 'number',
+                        description: 'Offset for pagination (default: 0)',
+                        optional: true,
+                    },
+                },
+                required: ['searchQuery'],
+            },
+            async function({ searchQuery, size = 20, from = 0 }) {
                 try {
                     const response = await axios.get(`https://registry.npmjs.org/-/v1/search`, {
                         params: {
@@ -76,7 +91,7 @@ export class NpmSearch implements INodeType {
                     throw new Error(`Failed to search NPM: ${error.message}`);
                 }
             },
-        });
+        };
 
         return [[{ json: { tools: [npmSearchTool] } }]];
     }
