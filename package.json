@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-npm-tools",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "n8n node for NPM tools and search functionality with AI-powered relevance scoring",
   "keywords": [
     "n8n-community-node-package",
