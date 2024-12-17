@@ -37,7 +37,7 @@ export class PandocConvert implements INodeType {
             },
         },
         inputs: ['main'],
-        outputs: [NodeConnectionType.AiTool , 'main'],
+        outputs: [ 'main'],
         properties: [],
     };
 
