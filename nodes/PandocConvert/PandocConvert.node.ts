@@ -7,6 +7,10 @@ import {
 } from 'n8n-workflow';
 import pandoc from 'node-pandoc';
 import { promisify } from 'util';
+import { writeFile, readFile, unlink } from 'fs/promises';
+import { join } from 'path';
+import { tmpdir } from 'os';
+import { v4 as uuidv4 } from 'uuid';
 
 const pandocAsync = promisify(pandoc);
 
@@ -149,31 +153,53 @@ export class PandocConvert implements INodeType {
                     throw new Error(`No binary data found in property "${binaryPropertyName}"`);
                 }
 
-                const content = Buffer.from(binaryData.data, 'base64').toString();
+                // Create temporary file paths
+                const tempDir = tmpdir();
+                const tempId = uuidv4();
+                const inputPath = join(tempDir, `pandoc_input_${tempId}`);
+                const outputPath = join(tempDir, `pandoc_output_${tempId}`);
 
-                // Build pandoc arguments
-                const args = [
-                    '-f', fromFormat,
-                    '-t', toFormat,
-                    ...options.split(' ').filter(Boolean)
-                ];
+                try {
+                    // Write input file
+                    const buffer = Buffer.from(binaryData.data, 'base64');
+                    await writeFile(inputPath, buffer);
 
-                // Convert using pandoc
-                const result = await pandocAsync(content, args);
+                    // Build pandoc arguments
+                    const args = [
+                        '-f', fromFormat,
+                        '-t', toFormat,
+                        '-o', outputPath,
+                        ...options.split(' ').filter(Boolean)
+                    ];
 
-                // Create the new binary data
-                const newBinaryData = {
-                    [binaryPropertyName]: {
-                        data: Buffer.from(result).toString('base64'),
-                        mimeType: PandocConvert.getMimeType(toFormat),
-                        fileName: PandocConvert.getFileName(binaryData.fileName || 'document', toFormat),
+                    // Convert using pandoc
+                    await pandocAsync(inputPath, args);
+
+                    // Read output file
+                    const outputContent = await readFile(outputPath);
+
+                    // Create the new binary data
+                    const newBinaryData = {
+                        [binaryPropertyName]: {
+                            data: outputContent.toString('base64'),
+                            mimeType: PandocConvert.getMimeType(toFormat),
+                            fileName: PandocConvert.getFileName(binaryData.fileName || 'document', toFormat),
+                        }
+                    };
+
+                    returnData.push({
+                        json: items[i].json,
+                        binary: newBinaryData,
+                    });
+                } finally {
+                    // Clean up temporary files
+                    try {
+                        await unlink(inputPath);
+                        await unlink(outputPath);
+                    } catch (error) {
+                        // Ignore cleanup errors
                     }
-                };
-
-                returnData.push({
-                    json: items[i].json,
-                    binary: newBinaryData,
-                });
+                }
             } catch (error) {
                 if (this.continueOnFail()) {
                     returnData.push({
