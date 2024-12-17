@@ -1,0 +1,23 @@
+{
+    "node": "pandocConvert",
+    "nodeVersion": "1.0",
+    "codexVersion": "1.0",
+    "categories": ["AI"],
+    "subcategories": {
+        "AI": ["Tools"]
+    },
+    "resources": {
+        "primaryDocumentation": [
+            {
+                "url": "https://github.com/yourusername/n8n-nodes-pandoc"
+            }
+        ]
+    },
+    "alias": ["pandoc", "convert", "document", "markdown", "docx", "pdf"],
+    "description": "Convert documents between different formats using Pandoc",
+    "name": "Pandoc Convert",
+    "group": ["transform"],
+    "defaults": {
+        "name": "Pandoc Convert"
+    }
+}
