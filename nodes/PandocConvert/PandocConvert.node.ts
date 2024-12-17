@@ -3,7 +3,6 @@ import {
     INodeExecutionData,
     INodeType,
     INodeTypeDescription,
-    NodeConnectionType,
 } from 'n8n-workflow';
 import { DynamicStructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
@@ -37,7 +36,7 @@ export class PandocConvert implements INodeType {
             },
         },
         inputs: ['main'],
-        outputs: [ 'main'],
+        outputs: ['main'],
         properties: [],
     };
 
