@@ -1,6 +1,6 @@
 {
   "name": "@couleetech/n8n-nodes-pandoc",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "n8n node for document conversion using Pandoc",
   "keywords": [
     "n8n-community-node-package",
