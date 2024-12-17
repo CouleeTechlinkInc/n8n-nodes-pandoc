@@ -1,8 +1,8 @@
 import { INodeType } from 'n8n-workflow';
-import { NpmSearch } from './nodes/NpmSearch/NpmSearch.node';
+import { PandocConvert } from './nodes/PandocConvert/PandocConvert.node';
 
 export const nodes: INodeType[] = [
-	NpmSearch,
+	new PandocConvert(),
 ];
 
 export const nodeTypes = nodes;

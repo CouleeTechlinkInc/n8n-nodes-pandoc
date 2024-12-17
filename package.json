@@ -1,14 +1,15 @@
 {
-  "name": "n8n-nodes-npm-tools",
+  "name": "@couleetech/n8n-nodes-pandoc",
   "version": "0.2.1",
-  "description": "n8n node for NPM tools and search functionality with AI-powered relevance scoring",
+  "description": "n8n node for document conversion using Pandoc",
   "keywords": [
     "n8n-community-node-package",
     "n8n-node-ai-tool",
-    "npm",
-    "npm-search",
-    "ai",
-    "package-search",
+    "pandoc",
+    "document-conversion",
+    "markdown",
+    "docx",
+    "pdf",
     "n8n"
   ],
   "license": "MIT",
@@ -19,7 +20,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/yourusername/n8n-nodes-npm-tools.git"
+    "url": "git+https://github.com/yourusername/n8n-nodes-pandoc.git"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -37,7 +38,7 @@
   "n8n": {
     "n8nNodesApiVersion": 1,
     "nodes": [
-      "dist/nodes/NpmSearch/NpmSearch.node.js"
+      "dist/nodes/PandocConvert/PandocConvert.node.js"
     ],
     "aiTool": {
       "enabled": true,
@@ -67,6 +68,7 @@
   "dependencies": {
     "@langchain/core": "^0.1.63",
     "axios": "^1.7.8",
+    "node-pandoc": "^0.3.0",
     "zod": "^3.22.4"
   }
 }
