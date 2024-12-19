@@ -10,7 +10,7 @@ import { promisify } from 'util';
 import { writeFile, readFile, unlink, readdir, mkdir, rmdir } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import { v5 as uuidv5, v4 as uuidv4 } from 'uuid';
+import { v5 as uuidv5 } from 'uuid';
 import mime from 'mime-types';
 
 const pandocAsync = promisify(pandoc);
