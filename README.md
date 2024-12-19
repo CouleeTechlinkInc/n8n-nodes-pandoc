@@ -4,7 +4,7 @@ This is a node for n8n that allows you to convert documents between different fo
 
 # NOTICE
 
-This is just a node that I needed for a project and thought I'd share. It is 95% ai generated, Written in a couple hours, so don't expect the world from it. It works for the workflow I needed it for. It may get future updates, but I'm not promising anything.
+This is just a node that I needed for a project and thought I'd share. It is 95% ai generated, Written in a couple hours, so don't expect the world from it. It works for the workflow I needed it for ( to convert a docx to markdown ). It may get future updates, but I'm not promising anything.
 
 ## Prerequisites
 
