@@ -20,7 +20,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/yourusername/n8n-nodes-pandoc.git"
+    "url": "git+https://github.com/CouleeTechlinkInc/n8n-nodes-pandoc.git"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

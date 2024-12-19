@@ -10,10 +10,13 @@ import { promisify } from 'util';
 import { writeFile, readFile, unlink, readdir, mkdir, rmdir } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import { v4 as uuidv4 } from 'uuid';
+import { v5 as uuidv5, v4 as uuidv4 } from 'uuid';
 import mime from 'mime-types';
 
 const pandocAsync = promisify(pandoc);
+
+// Create a namespace UUID for our application (using v4 for the namespace is fine as it's constant)
+const NAMESPACE_UUID = '6ba7b810-9dad-11d1-80b4-00c04fd430c8'; // UUID namespace for URLs (standard namespace)
 
 interface PandocError extends Error {
     code?: string;
@@ -190,9 +193,11 @@ export class PandocConvert implements INodeType {
                     throw new Error(`No binary data found in property "${binaryPropertyName}"`);
                 }
 
+                // Generate deterministic UUID based on the input filename
+                const tempId = uuidv5(binaryData.fileName || 'unnamed', NAMESPACE_UUID);
+                
                 // Create temporary file paths
                 const tempDir = tmpdir();
-                const tempId = uuidv4();
                 const inputPath = join(tempDir, `pandoc_input_${tempId}`);
                 const outputPath = join(tempDir, `pandoc_output_${tempId}`);
                 const mediaDir = join(tempDir, `media_${tempId}`);
@@ -243,16 +248,22 @@ export class PandocConvert implements INodeType {
                         const fileContent = await readFile(filePath);
                         const mimeType = mime.lookup(file) || 'application/octet-stream';
 
+                        // Generate a deterministic image name based on the source document name and original image name
+                        const imageId = uuidv5(`${binaryData.fileName}-${file}`, NAMESPACE_UUID);
+                        const fileExt = file.split('.').pop() || '';
+                        const deterministicImageName = `${imageId}.${fileExt}`;
+
                         imageData.push({
                             json: {
                                 sourceDocument: binaryData.fileName,
-                                imageName: file,
+                                originalImageName: file,
+                                imageName: deterministicImageName,
                             },
                             binary: {
                                 image: {
                                     data: fileContent.toString('base64'),
                                     mimeType,
-                                    fileName: file,
+                                    fileName: deterministicImageName,
                                 }
                             }
                         });
