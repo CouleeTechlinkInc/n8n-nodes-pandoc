@@ -13,10 +13,7 @@ This is just a node that I needed for a project and thought I'd share. It is 95%
 
 ## Installation
 
-1. Install the node package in your n8n installation:
-   ```bash
-   npm install n8n-nodes-pandoc
-   ```
+1. In Community Nodes, install `@couleetech/n8n-nodes-pandoc`
 
 2. **Important**: Pandoc must be installed on your system for this node to work.
 
